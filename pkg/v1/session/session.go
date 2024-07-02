@@ -9,85 +9,77 @@ import (
 	"net/http/httputil"
 	"strings"
 
+	cfg "github.com/tdrip/apiclient/pkg/v1/cfg"
 	uris "github.com/tdrip/apiclient/pkg/v1/uris"
 )
+
+type SessionLog func(msg string, data []byte, err error)
 
 type Session struct {
 	accesstoken  string
 	refreshtoken string
-	api          uris.EndPoint
-	auth         uris.EndPoint
-	verifyauth   string
-	revokeauth   string
+	api          cfg.APIServer
 	client       *http.Client
 	Debug        bool
 	DumpResponse bool
 	DumpRequest  bool
+
+	Logger SessionLog
 }
 
-func NewSession(client *http.Client, server string, authserver string, apipath string, authpath string, verifyauth string, revokeauth string) (Session, error) {
+func NewSessionCustomLogger(client *http.Client, api cfg.APIServer, logger SessionLog) (Session, error) {
+	sess, err := NewSession(client, api)
+	sess.Logger = logger
+	return sess, err
+}
+
+func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
 	sess := Session{}
 	sess.client = client
-	api, err := uris.NewEndPoint(server, apipath)
-	if err != nil {
-		return sess, err
-	}
 	sess.api = api
-
-	aserver := authserver
-	if len(aserver) == 0 {
-		aserver = server
-	}
-
-	sess.verifyauth = verifyauth
-	sess.revokeauth = revokeauth
-
-	auth, err := uris.NewEndPoint(aserver, authpath)
-	if err != nil {
-		return sess, err
-	}
-	sess.auth = auth
 	return sess, nil
 }
 
 func (sess Session) PostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodPost, uri, sess.api, req)
+	return sess.UnAuthorizedRequest(http.MethodPost, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) HeadBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodHead, uri, sess.api, req)
+	return sess.UnAuthorizedRequest(http.MethodHead, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) Get(uri string) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodGet, uri, sess.api, nil)
+	return sess.UnAuthorizedRequest(http.MethodGet, uri, sess.api.EndPoint, nil)
 }
 
 func (sess Session) GetBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodGet, uri, sess.api, req)
+	return sess.UnAuthorizedRequest(http.MethodGet, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) PutBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodPut, uri, sess.api, req)
+	return sess.UnAuthorizedRequest(http.MethodPut, uri, sess.api.EndPoint, req)
 }
 
-func (sess Session) AuthorizedRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
+func (sess Session) UnAuthorizedRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
 
 	url, err := ep.GetURL(uri)
 	emptydata := []byte{}
 	if err != nil {
 		return emptydata, nil, err
 	}
-	return sess.Authorized(method, url, req)
+	return sess.UnAuthorized(method, url, req)
 }
 
-func (sess Session) Authorized(method string, url string, req interface{}) ([]byte, *http.Response, error) {
-	emptydata := []byte{}
-
+func (sess Session) UnAuthorisedHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
-	headers["Authorization"] = "Bearer " + sess.accesstoken
+	return headers
+}
 
-	res, err := sess.APICall(method, url, req, headers)
+func (sess Session) UnAuthorized(method string, url string, req interface{}) ([]byte, *http.Response, error) {
+	emptydata := []byte{}
+
+	res, err := sess.APICall(method, url, req, sess.UnAuthorisedHeaders())
 
 	if err != nil {
 		return emptydata, res, err
@@ -97,8 +89,9 @@ func (sess Session) Authorized(method string, url string, req interface{}) ([]by
 		return emptydata, res, fmt.Errorf("%s result was nil: %s Status Code %d", url, res.Status, res.StatusCode)
 	}
 
-	if sess.Debug {
-		debug(httputil.DumpResponse(res, sess.DumpResponse))
+	if sess.Debug && sess.Logger != nil {
+		b, e := httputil.DumpResponse(res, sess.DumpResponse)
+		sess.Logger("UnAuthorized", b, e)
 	}
 
 	if res.StatusCode != 200 {
@@ -133,8 +126,10 @@ func (sess Session) APICall(method string, url string, body interface{}, headers
 		req.Header.Add(k, v)
 	}
 
-	if sess.Debug {
-		debug(httputil.DumpRequestOut(req, sess.DumpRequest))
+	if sess.Debug && sess.Logger != nil {
+		b, e := httputil.DumpRequestOut(req, sess.DumpRequest)
+		sess.Logger("APICall", b, e)
+
 	}
 
 	if sess.client == nil {
@@ -144,10 +139,10 @@ func (sess Session) APICall(method string, url string, body interface{}, headers
 	}
 }
 
-func debug(data []byte, err error) {
+func DefaultLogger(msg string, data []byte, err error) {
 	if err == nil {
-		log.Printf("%s\n\n", data)
+		log.Printf("Message (Error) %s\n  Data:  %s\n   Err:  %s\n", msg, data, err.Error())
 	} else {
-		log.Fatalf("%s\n\n", err)
+		log.Printf("Message (Debug):%s\n  Data:  %s\n", msg, data)
 	}
 }
