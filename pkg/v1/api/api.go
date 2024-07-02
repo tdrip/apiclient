@@ -1,7 +1,7 @@
 package api
 
 import (
-	sess "github.com/tdrip/apiclient/pkg/session"
+	sess "github.com/tdrip/apiclient/pkg/v1/session"
 )
 
 type API interface {
