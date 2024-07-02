@@ -16,8 +16,6 @@ import (
 type SessionLog func(msg string, data []byte, err error)
 
 type Session struct {
-	accesstoken  string
-	refreshtoken string
 	api          cfg.APIServer
 	client       *http.Client
 	Debug        bool
