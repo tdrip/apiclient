@@ -138,7 +138,7 @@ func (sess Session) APICall(method string, url string, body interface{}, headers
 }
 
 func DefaultLogger(msg string, data []byte, err error) {
-	if err == nil {
+	if err != nil {
 		log.Printf("Message (Error) %s\n  Data:  %s\n   Err:  %s\n", msg, data, err.Error())
 	} else {
 		log.Printf("Message (Debug):%s\n  Data:  %s\n", msg, data)
