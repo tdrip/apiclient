@@ -12,6 +12,7 @@ type API interface {
 }
 
 type APIEndpoint struct {
+	API
 	session *sess.Session
 	Name    string
 }
