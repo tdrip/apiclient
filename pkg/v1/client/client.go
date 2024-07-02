@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	sess "github.com/tdrip/apiclient/pkg/session"
+	api "github.com/tdrip/apiclient/pkg/v1/api"
+	sess "github.com/tdrip/apiclient/pkg/v1/session"
 )
 
 type Client struct {
 	Session *sess.Session
+	APIs    map[string]api.API
 }
 
 func buildClient() *http.Client {
@@ -34,4 +36,11 @@ func New(cl *http.Client, server string, authserver string, authtoken string, ap
 	session = session.UpdateAToken(authtoken)
 	client.Session = &session
 	return &client, nil
+}
+
+func (cl Client) AddAPI(a api.API) Client {
+	apis := cl.APIs
+	apis[a.GetName()] = a
+	cl.APIs = apis
+	return cl
 }
