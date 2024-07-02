@@ -9,7 +9,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	uris "github.com/tdrip/apiclient/pkg/uris"
+	uris "github.com/tdrip/apiclient/pkg/v1/uris"
 )
 
 type Session struct {
