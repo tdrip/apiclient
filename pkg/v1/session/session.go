@@ -43,7 +43,7 @@ func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
 	sess.client = client
 	sess.api = api
 	sess.GetHeaders = sess.UnAuthorisedHeaders
-	sess.MakeRequest = sess.MakeRequest
+	sess.MakeRequest = sess.DoRequest
 	return sess, nil
 }
 
@@ -67,7 +67,7 @@ func (sess Session) PutBody(uri string, req interface{}) ([]byte, *http.Response
 	return sess.MakeRequest(http.MethodPut, uri, sess.api.EndPoint, req)
 }
 
-func (sess Session) MakeRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
+func (sess Session) DoRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
 	url, err := ep.GetURL(uri)
 	emptydata := []byte{}
 	if err != nil {
