@@ -1,25 +1,16 @@
 package client
 
 import (
-	"crypto/tls"
 	"errors"
 	"net/http"
-	"time"
 
 	cfg "github.com/tdrip/apiclient/pkg/v1/cfg"
 	sess "github.com/tdrip/apiclient/pkg/v1/session"
+	utils "github.com/tdrip/apiclient/pkg/v1/utils"
 )
 
 type Client struct {
 	Session sess.Session
-}
-
-func buildClient() *http.Client {
-	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: &tls.Config{Renegotiation: tls.RenegotiateOnceAsClient, InsecureSkipVerify: true}, TLSNextProto: map[string]func(authority string, c *tls.Conn) http.RoundTripper{}}
-	return &http.Client{
-		Timeout:   time.Second * 10,
-		Transport: transport,
-	}
 }
 
 func NewClientCustomLogger(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) *Client {
@@ -35,7 +26,7 @@ func NewTlsSkipCustomLogger(api cfg.APIServer, auth cfg.AuthServer, logger sess.
 }
 
 func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) *Client {
-	return NewClient(buildClient(), api, auth)
+	return NewClient(utils.BuildNoTLSClient(), api, auth)
 }
 
 func NewClient(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) *Client {
