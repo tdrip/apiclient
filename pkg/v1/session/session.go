@@ -9,6 +9,8 @@ import (
 	"net/http/httputil"
 	"strings"
 
+	utils "github.com/tdrip/apiclient/pkg/v1/utils"
+
 	cfg "github.com/tdrip/apiclient/pkg/v1/cfg"
 	uris "github.com/tdrip/apiclient/pkg/v1/uris"
 )
@@ -113,7 +115,7 @@ func (sess Session) Call(method string, url string, req interface{}, headers map
 		sess.Logger("Call", string(b), e)
 	}
 
-	if res.StatusCode != 200 {
+	if !utils.RequestIsSuccessful(res.StatusCode) {
 		return emptydata, res, fmt.Errorf("%s failed with Status: %s Status Code %d", url, res.Status, res.StatusCode)
 	}
 
@@ -210,11 +212,11 @@ func (sess Session) Verify() error {
 		return err
 	}
 
-	if res.StatusCode == 200 {
+	if !utils.RequestIsSuccessful(res.StatusCode) {
 		return nil
 	} else {
 		url, _ := sess.auth.EndPoint.GetURL("")
-		return fmt.Errorf("%s - Response was not 200: %s Status Code %d", url, res.Status, res.StatusCode)
+		return fmt.Errorf("%s - Response was not a 2xx success code: %s Status Code %d", url, res.Status, res.StatusCode)
 	}
 }
 
