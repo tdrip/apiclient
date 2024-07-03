@@ -18,9 +18,9 @@ type AuthorisedSession struct {
 }
 
 func NewAuthorisedSessionCustomLogger(client *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger SessionLog) (AuthorisedSession, error) {
-	sess, err := NewAuthorisedSession(client, api, auth)
-	sess.Session.Logger = logger
-	return sess, err
+	asess, err := NewAuthorisedSession(client, api, auth)
+	asess.Session.Logger = logger
+	return asess, err
 }
 
 func NewAuthorisedSession(client *http.Client, api cfg.APIServer, auth cfg.AuthServer) (AuthorisedSession, error) {
@@ -31,49 +31,49 @@ func NewAuthorisedSession(client *http.Client, api cfg.APIServer, auth cfg.AuthS
 	return asess, err
 }
 
-func (sess AuthorisedSession) PostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodPost, uri, sess.Session.api.EndPoint, req)
+func (asess AuthorisedSession) PostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodPost, uri, asess.Session.api.EndPoint, req)
 }
 
-func (sess AuthorisedSession) HeadBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodHead, uri, sess.Session.api.EndPoint, req)
+func (asess AuthorisedSession) HeadBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodHead, uri, asess.Session.api.EndPoint, req)
 }
 
-func (sess AuthorisedSession) Get(uri string) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodGet, uri, sess.Session.api.EndPoint, nil)
+func (asess AuthorisedSession) Get(uri string) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodGet, uri, asess.Session.api.EndPoint, nil)
 }
 
-func (sess AuthorisedSession) GetBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodGet, uri, sess.Session.api.EndPoint, req)
+func (asess AuthorisedSession) GetBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodGet, uri, asess.Session.api.EndPoint, req)
 }
 
-func (sess AuthorisedSession) PutBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodPut, uri, sess.Session.api.EndPoint, req)
+func (asess AuthorisedSession) PutBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodPut, uri, asess.Session.api.EndPoint, req)
 }
 
-func (sess AuthorisedSession) AuthorizedRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
+func (asess AuthorisedSession) AuthorizedRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
 
 	url, err := ep.GetURL(uri)
 	emptydata := []byte{}
 	if err != nil {
 		return emptydata, nil, err
 	}
-	return sess.Authorized(method, url, req)
+	return asess.Authorized(method, url, req)
 }
 
-func (sess AuthorisedSession) AuthorisedHeaders() map[string]string {
+func (asess AuthorisedSession) AuthorisedHeaders() map[string]string {
 
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
-	headers["Authorization"] = "Bearer " + sess.accesstoken
+	headers["Authorization"] = "Bearer " + asess.accesstoken
 
 	return headers
 }
 
-func (sess AuthorisedSession) Authorized(method string, url string, req interface{}) ([]byte, *http.Response, error) {
+func (asess AuthorisedSession) Authorized(method string, url string, req interface{}) ([]byte, *http.Response, error) {
 	emptydata := []byte{}
 
-	res, err := sess.Session.APICall(method, url, req, sess.AuthorisedHeaders())
+	res, err := asess.Session.APICall(method, url, req, asess.AuthorisedHeaders())
 
 	if err != nil {
 		return emptydata, res, err
@@ -83,9 +83,9 @@ func (sess AuthorisedSession) Authorized(method string, url string, req interfac
 		return emptydata, res, fmt.Errorf("%s result was nil: %s Status Code %d", url, res.Status, res.StatusCode)
 	}
 
-	if sess.Session.Debug && sess.Session.Logger != nil {
-		b, e := httputil.DumpResponse(res, sess.Session.DumpResponse)
-		sess.Session.Logger("Authorized", b, e)
+	if asess.Session.Debug && asess.Session.Logger != nil {
+		b, e := httputil.DumpResponse(res, asess.Session.DumpResponse)
+		asess.Session.Logger("Authorized", b, e)
 	}
 
 	if res.StatusCode != 200 {
@@ -101,18 +101,18 @@ func (sess AuthorisedSession) Authorized(method string, url string, req interfac
 	return []byte{}, res, err
 }
 
-func (sess AuthorisedSession) UpdateAToken(accesstoken string) AuthorisedSession {
-	sess.accesstoken = accesstoken
+func (asess AuthorisedSession) UpdateAToken(accesstoken string) AuthorisedSession {
+	asess.accesstoken = accesstoken
 	return sess
 }
 
-func (sess AuthorisedSession) UpdateRToken(refreshtoken string) AuthorisedSession {
-	sess.refreshtoken = refreshtoken
+func (asess AuthorisedSession) UpdateRToken(refreshtoken string) AuthorisedSession {
+	asess.refreshtoken = refreshtoken
 	return sess
 }
 
-func (sess AuthorisedSession) Verify() error {
-	_, res, err := sess.AuthGet(sess.auth.Verifyauth)
+func (asess AuthorisedSession) Verify() error {
+	_, res, err := asess.AuthGet(asess.auth.Verifyauth)
 	if err != nil {
 		return err
 	}
@@ -120,19 +120,19 @@ func (sess AuthorisedSession) Verify() error {
 	if res.StatusCode == 200 {
 		return nil
 	} else {
-		url, _ := sess.auth.EndPoint.GetURL("")
+		url, _ := asess.auth.EndPoint.GetURL("")
 		return fmt.Errorf("%s - Response was not 200: %s Status Code %d", url, res.Status, res.StatusCode)
 	}
 }
 
-func (sess AuthorisedSession) RevokeAndDisconnect() {
-	sess.AuthGet(sess.auth.Revokeauth)
+func (asess AuthorisedSession) RevokeAndDisconnect() {
+	asess.AuthGet(asess.auth.Revokeauth)
 }
 
-func (sess AuthorisedSession) AuthPostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodPost, uri, sess.auth.EndPoint, req)
+func (asess AuthorisedSession) AuthPostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodPost, uri, asess.auth.EndPoint, req)
 }
 
-func (sess AuthorisedSession) AuthGet(uri string) ([]byte, *http.Response, error) {
-	return sess.AuthorizedRequest(http.MethodGet, uri, sess.auth.EndPoint, nil)
+func (asess AuthorisedSession) AuthGet(uri string) ([]byte, *http.Response, error) {
+	return asess.AuthorizedRequest(http.MethodGet, uri, asess.auth.EndPoint, nil)
 }
