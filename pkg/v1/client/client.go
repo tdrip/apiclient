@@ -2,17 +2,17 @@ package client
 
 import (
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"time"
 
-	api "github.com/tdrip/apiclient/pkg/v1/api"
 	cfg "github.com/tdrip/apiclient/pkg/v1/cfg"
 	sess "github.com/tdrip/apiclient/pkg/v1/session"
 )
 
 type Client struct {
-	Session *sess.AuthorisedSession
-	APIs    map[string]api.API
+	AuthSession *sess.AuthorisedSession
+	Session     *sess.Session
 }
 
 func buildClient() *http.Client {
@@ -23,25 +23,33 @@ func buildClient() *http.Client {
 	}
 }
 
-func NewTlsSkip(authtoken string, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
-	return New(buildClient(), authtoken, api, auth)
+func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+	return New(buildClient(), api, auth)
 }
 
-func New(cl *http.Client, authtoken string, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+func New(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
 	client := Client{}
 
-	session, err := sess.NewAuthorisedSession(cl, api, auth)
+	asession, err := sess.NewAuthorisedSession(cl, api, auth)
 	if err != nil {
 		return nil, err
 	}
-	session = session.UpdateAToken(authtoken)
+	session, err := sess.NewSession(cl, api)
+	if err != nil {
+		return nil, err
+	}
 	client.Session = &session
+	client.AuthSession = &asession
 	return &client, nil
 }
 
-func (cl Client) AddAPI(a api.API) Client {
-	apis := cl.APIs
-	apis[a.GetName()] = a
-	cl.APIs = apis
-	return cl
+func SetAuthToken(client *Client, token string) error {
+
+	if client.AuthSession != nil {
+		auth := client.AuthSession
+		updated := (*auth).SetAuthToken(token)
+		client.AuthSession = &updated
+	}
+
+	return errors.New("Auth Session was nil")
 }
