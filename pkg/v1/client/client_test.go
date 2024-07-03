@@ -26,6 +26,8 @@ func TestClient(t *testing.T) {
 
 	fmt.Println("Bytes")
 	fmt.Printf("%s", string(bytes))
+	fmt.Println(" ")
+
 	fmt.Println("Response")
 	fmt.Printf("%v", resp)
 }
