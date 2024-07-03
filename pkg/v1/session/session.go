@@ -14,6 +14,7 @@ import (
 )
 
 type SessionLog func(msg string, data []byte, err error)
+type GetHeaders map[string]string
 
 type Session struct {
 	api          cfg.APIServer
@@ -22,7 +23,8 @@ type Session struct {
 	DumpResponse bool
 	DumpRequest  bool
 
-	Logger SessionLog
+	Logger     SessionLog
+	GetHeaders GetHeaders
 }
 
 func NewSessionCustomLogger(client *http.Client, api cfg.APIServer, logger SessionLog) (Session, error) {
@@ -35,6 +37,7 @@ func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
 	sess := Session{}
 	sess.client = client
 	sess.api = api
+	sess.GetHeaders = sess.UnAuthorisedHeaders()
 	return sess, nil
 }
 
@@ -65,31 +68,32 @@ func (sess Session) UnAuthorizedRequest(method string, uri string, ep uris.EndPo
 	if err != nil {
 		return emptydata, nil, err
 	}
-	return sess.UnAuthorized(method, url, req)
+	return sess.Call(method, url, req, sess.GetHeaders)
 }
 
 func (sess Session) UnAuthorisedHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
+	headers["Accept"] = "application/json"
 	return headers
 }
 
-func (sess Session) UnAuthorized(method string, url string, req interface{}) ([]byte, *http.Response, error) {
+func (sess Session) Call(method string, url string, req interface{}, headers map[string]string) ([]byte, *http.Response, error) {
 	emptydata := []byte{}
 
-	res, err := sess.APICall(method, url, req, sess.UnAuthorisedHeaders())
+	res, err := sess.APICall(method, url, req, headers)
 
 	if err != nil {
 		return emptydata, res, err
 	}
 
 	if res == nil {
-		return emptydata, res, fmt.Errorf("%s result was nil: %s Status Code %d", url, res.Status, res.StatusCode)
+		return emptydata, res, fmt.Errorf("%s result was nil and error was nil", url)
 	}
 
 	if sess.Debug && sess.Logger != nil {
 		b, e := httputil.DumpResponse(res, sess.DumpResponse)
-		sess.Logger("UnAuthorized", b, e)
+		sess.Logger("Call", b, e)
 	}
 
 	if res.StatusCode != 200 {
