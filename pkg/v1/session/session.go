@@ -190,6 +190,10 @@ func DefaultLogger(msg string, data string, err error) {
 	}
 }
 
+func (sess Session) HasToken() bool {
+	return len(sess.accesstoken) > 0
+}
+
 func (sess Session) UpdateAToken(accesstoken string) Session {
 	sess.accesstoken = accesstoken
 	return sess
