@@ -46,10 +46,8 @@ func New(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, erro
 func SetAuthToken(client *Client, token string) error {
 
 	if client.AuthSession != nil {
-		auth := client.AuthSession
-		updated := (*auth).SetAuthToken(token)
-		client.AuthSession = &updated
+		client.AuthSession.SetAToken(token)
 	}
 
-	return errors.New("Auth Session was nil")
+	return errors.New("auth Session was nil")
 }
