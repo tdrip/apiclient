@@ -11,11 +11,11 @@ func TestClient(t *testing.T) {
 	auth := cfg.AuthServer{}
 	api, _ := cfg.NewAPIServer("jsonplaceholder.typicode.com", "todos")
 	newclient := NewTlsSkip(api, auth)
-	newclient.AuthSession.Debug = true
-	newclient.AuthSession.DumpResponse = true
-	newclient.AuthSession.DumpRequest = true
+	newclient.Session.Debug = true
+	newclient.Session.DumpResponse = true
+	newclient.Session.DumpRequest = true
 
-	bytes, resp, err := newclient.AuthSession.Get("/1")
+	bytes, resp, err := newclient.Session.Get("/1")
 	if err != nil {
 		t.Fatalf("%v", err.Error())
 	}
