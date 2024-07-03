@@ -38,7 +38,11 @@ func (asess AuthorisedSession) AuthorisedHeaders() map[string]string {
 	headers["Content-Type"] = "application/json"
 	headers["Accept"] = "application/json"
 	headers["Authorization"] = "Bearer " + asess.accesstoken
-
+	if asess.Session.Debug && asess.Session.Logger != nil {
+		for k, v := range headers {
+			asess.Session.Logger("AuthorisedHeaders", fmt.Sprintf("[%s] : %s", k, v), nil)
+		}
+	}
 	return headers
 }
 
