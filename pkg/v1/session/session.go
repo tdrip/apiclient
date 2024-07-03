@@ -29,22 +29,19 @@ type Session struct {
 	MakeRequest MakeRequest
 }
 
-func NewSessionCustomLogger(client *http.Client, api cfg.APIServer, logger SessionLog) (Session, error) {
-	sess, err := NewSession(client, api)
-	if err != nil {
-		return sess, err
-	}
+func NewSessionCustomLogger(client *http.Client, api cfg.APIServer, logger SessionLog) Session {
+	sess := NewSession(client, api)
 	sess.Logger = logger
-	return sess, err
+	return sess
 }
 
-func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
+func NewSession(client *http.Client, api cfg.APIServer) Session {
 	sess := Session{}
 	sess.client = client
 	sess.api = api
 	sess.GetHeaders = sess.UnAuthorisedHeaders
 	sess.MakeRequest = sess.DoRequest
-	return sess, nil
+	return sess
 }
 
 func (sess Session) PostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
