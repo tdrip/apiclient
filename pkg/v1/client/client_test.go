@@ -10,7 +10,7 @@ import (
 func TestClient(t *testing.T) {
 	auth := cfg.AuthServer{}
 	api, _ := cfg.NewAPIServer("jsonplaceholder.typicode.com", "todos")
-	newclient, err := NewTlsSkip("", api, auth)
+	newclient, err := NewTlsSkip(api, auth)
 	if err != nil {
 		t.Errorf("%v", err.Error())
 	}
