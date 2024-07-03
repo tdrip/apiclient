@@ -103,12 +103,12 @@ func (asess AuthorisedSession) Authorized(method string, url string, req interfa
 
 func (asess AuthorisedSession) UpdateAToken(accesstoken string) AuthorisedSession {
 	asess.accesstoken = accesstoken
-	return sess
+	return asess
 }
 
 func (asess AuthorisedSession) UpdateRToken(refreshtoken string) AuthorisedSession {
 	asess.refreshtoken = refreshtoken
-	return sess
+	return asess
 }
 
 func (asess AuthorisedSession) Verify() error {
