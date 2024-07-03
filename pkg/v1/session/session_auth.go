@@ -106,6 +106,10 @@ func (asess AuthorisedSession) UpdateAToken(accesstoken string) AuthorisedSessio
 	return asess
 }
 
+func (asess *AuthorisedSession) SetAToken(accesstoken string) {
+	asess.accesstoken = accesstoken
+}
+
 func (asess AuthorisedSession) UpdateRToken(refreshtoken string) AuthorisedSession {
 	asess.refreshtoken = refreshtoken
 	return asess
