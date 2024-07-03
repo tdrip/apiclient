@@ -12,7 +12,6 @@ import (
 
 type Client struct {
 	AuthSession *sess.AuthorisedSession
-	Session     *sess.Session
 }
 
 func buildClient() *http.Client {
@@ -23,40 +22,27 @@ func buildClient() *http.Client {
 	}
 }
 
-func NewClientCustomLogger(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) (*Client, error) {
-	client, err := NewClient(cl, api, auth)
-	if err == nil {
-		client.Session.Logger = logger
-	}
-	return client, err
+func NewClientCustomLogger(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) *Client {
+	client := NewClient(cl, api, auth)
+	client.AuthSession.Logger = logger
+	return client
 }
 
-func NewTlsSkipCustomLogger(api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) (*Client, error) {
-	client, err := NewTlsSkip(api, auth)
-	if err == nil {
-		client.Session.Logger = logger
-	}
-	return client, err
+func NewTlsSkipCustomLogger(api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) *Client {
+	client := NewTlsSkip(api, auth)
+	return client
 }
 
-func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) *Client {
 	return NewClient(buildClient(), api, auth)
 }
 
-func NewClient(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+func NewClient(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) *Client {
 	client := Client{}
 
-	asession, err := sess.NewAuthorisedSession(cl, api, auth)
-	if err != nil {
-		return nil, err
-	}
-	session, err := sess.NewSession(cl, api)
-	if err != nil {
-		return nil, err
-	}
-	client.Session = &session
+	asession := sess.NewAuthorisedSession(cl, api, auth)
 	client.AuthSession = &asession
-	return &client, nil
+	return &client
 }
 
 func HasAuthSession(client *Client) bool {
@@ -64,10 +50,12 @@ func HasAuthSession(client *Client) bool {
 }
 
 func SetAuthToken(client *Client, token string) error {
-
-	if HasAuthSession(client) {
-		client.AuthSession.SetAToken(token)
+	if client == nil {
+		return errors.New("client was nil")
 	}
-
-	return errors.New("auth Session was nil")
+	if HasAuthSession(client) {
+		sess.SetAToken(client.AuthSession, token)
+		return nil
+	}
+	return errors.New("auth session was nil")
 }
