@@ -23,11 +23,27 @@ func buildClient() *http.Client {
 	}
 }
 
-func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
-	return New(buildClient(), api, auth)
+func NewClientCustomLogger(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) (*Client, error) {
+	client, err := NewClient(cl, api, auth)
+	if err == nil {
+		client.Session.Logger = logger
+	}
+	return client, err
 }
 
-func New(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+func NewTlsSkipCustomLogger(api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) (*Client, error) {
+	client, err := NewTlsSkip(api, auth)
+	if err == nil {
+		client.Session.Logger = logger
+	}
+	return client, err
+}
+
+func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
+	return NewClient(buildClient(), api, auth)
+}
+
+func NewClient(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, error) {
 	client := Client{}
 
 	asession, err := sess.NewAuthorisedSession(cl, api, auth)
@@ -43,9 +59,13 @@ func New(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) (*Client, erro
 	return &client, nil
 }
 
+func HasAuthSession(client *Client) bool {
+	return client.AuthSession != nil
+}
+
 func SetAuthToken(client *Client, token string) error {
 
-	if client.AuthSession != nil {
+	if HasAuthSession(client) {
 		client.AuthSession.SetAToken(token)
 	}
 
