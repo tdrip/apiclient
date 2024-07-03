@@ -14,7 +14,8 @@ import (
 )
 
 type SessionLog func(msg string, data []byte, err error)
-type GetHeaders map[string]string
+type GetHeaders func() map[string]string
+type MakeRequest func(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error)
 
 type Session struct {
 	api          cfg.APIServer
@@ -23,12 +24,16 @@ type Session struct {
 	DumpResponse bool
 	DumpRequest  bool
 
-	Logger     SessionLog
-	GetHeaders GetHeaders
+	Logger      SessionLog
+	GetHeaders  GetHeaders
+	MakeRequest MakeRequest
 }
 
 func NewSessionCustomLogger(client *http.Client, api cfg.APIServer, logger SessionLog) (Session, error) {
 	sess, err := NewSession(client, api)
+	if err != nil {
+		return sess, err
+	}
 	sess.Logger = logger
 	return sess, err
 }
@@ -37,7 +42,8 @@ func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
 	sess := Session{}
 	sess.client = client
 	sess.api = api
-	sess.GetHeaders = sess.UnAuthorisedHeaders()
+	sess.GetHeaders = sess.UnAuthorisedHeaders
+	sess.MakeRequest = sess.UnAuthorizedRequest
 	return sess, nil
 }
 
@@ -68,7 +74,7 @@ func (sess Session) UnAuthorizedRequest(method string, uri string, ep uris.EndPo
 	if err != nil {
 		return emptydata, nil, err
 	}
-	return sess.Call(method, url, req, sess.GetHeaders)
+	return sess.Call(method, url, req, sess.GetHeaders())
 }
 
 func (sess Session) UnAuthorisedHeaders() map[string]string {
