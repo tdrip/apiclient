@@ -11,7 +11,7 @@ import (
 )
 
 type Client struct {
-	AuthSession *sess.AuthorisedSession
+	Session sess.Session
 }
 
 func buildClient() *http.Client {
@@ -24,12 +24,13 @@ func buildClient() *http.Client {
 
 func NewClientCustomLogger(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) *Client {
 	client := NewClient(cl, api, auth)
-	client.AuthSession.Logger = logger
+	client.Session.Logger = logger
 	return client
 }
 
 func NewTlsSkipCustomLogger(api cfg.APIServer, auth cfg.AuthServer, logger sess.SessionLog) *Client {
 	client := NewTlsSkip(api, auth)
+	client.Session.Logger = logger
 	return client
 }
 
@@ -38,24 +39,14 @@ func NewTlsSkip(api cfg.APIServer, auth cfg.AuthServer) *Client {
 }
 
 func NewClient(cl *http.Client, api cfg.APIServer, auth cfg.AuthServer) *Client {
-	client := Client{}
-
-	asession := sess.NewAuthorisedSession(cl, api, auth)
-	client.AuthSession = &asession
+	client := Client{Session: sess.NewSession(cl, api, auth)}
 	return &client
-}
-
-func HasAuthSession(client *Client) bool {
-	return client.AuthSession != nil
 }
 
 func SetAuthToken(client *Client, token string) error {
 	if client == nil {
 		return errors.New("client was nil")
 	}
-	if HasAuthSession(client) {
-		sess.SetAToken(client.AuthSession, token)
-		return nil
-	}
-	return errors.New("auth session was nil")
+	client.Session = client.Session.UpdateAToken(token)
+	return nil
 }
