@@ -13,7 +13,7 @@ import (
 	uris "github.com/tdrip/apiclient/pkg/v1/uris"
 )
 
-type SessionLog func(msg string, data []byte, err error)
+type SessionLog func(msg string, data string, err error)
 type GetHeaders func() map[string]string
 type MakeRequest func(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error)
 
@@ -43,32 +43,31 @@ func NewSession(client *http.Client, api cfg.APIServer) (Session, error) {
 	sess.client = client
 	sess.api = api
 	sess.GetHeaders = sess.UnAuthorisedHeaders
-	sess.MakeRequest = sess.UnAuthorizedRequest
+	sess.MakeRequest = sess.MakeRequest
 	return sess, nil
 }
 
 func (sess Session) PostBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.UnAuthorizedRequest(http.MethodPost, uri, sess.api.EndPoint, req)
+	return sess.MakeRequest(http.MethodPost, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) HeadBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.UnAuthorizedRequest(http.MethodHead, uri, sess.api.EndPoint, req)
+	return sess.MakeRequest(http.MethodHead, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) Get(uri string) ([]byte, *http.Response, error) {
-	return sess.UnAuthorizedRequest(http.MethodGet, uri, sess.api.EndPoint, nil)
+	return sess.MakeRequest(http.MethodGet, uri, sess.api.EndPoint, nil)
 }
 
 func (sess Session) GetBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.UnAuthorizedRequest(http.MethodGet, uri, sess.api.EndPoint, req)
+	return sess.MakeRequest(http.MethodGet, uri, sess.api.EndPoint, req)
 }
 
 func (sess Session) PutBody(uri string, req interface{}) ([]byte, *http.Response, error) {
-	return sess.UnAuthorizedRequest(http.MethodPut, uri, sess.api.EndPoint, req)
+	return sess.MakeRequest(http.MethodPut, uri, sess.api.EndPoint, req)
 }
 
-func (sess Session) UnAuthorizedRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
-
+func (sess Session) MakeRequest(method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
 	url, err := ep.GetURL(uri)
 	emptydata := []byte{}
 	if err != nil {
@@ -81,6 +80,12 @@ func (sess Session) UnAuthorisedHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
 	headers["Accept"] = "application/json"
+	if sess.Debug && sess.Logger != nil {
+		for k, v := range headers {
+			sess.Logger("UnAuthorisedHeaders", fmt.Sprintf("[%s] : %s", k, v), nil)
+		}
+	}
+
 	return headers
 }
 
@@ -99,7 +104,7 @@ func (sess Session) Call(method string, url string, req interface{}, headers map
 
 	if sess.Debug && sess.Logger != nil {
 		b, e := httputil.DumpResponse(res, sess.DumpResponse)
-		sess.Logger("Call", b, e)
+		sess.Logger("Call", string(b), e)
 	}
 
 	if res.StatusCode != 200 {
@@ -136,8 +141,7 @@ func (sess Session) APICall(method string, url string, body interface{}, headers
 
 	if sess.Debug && sess.Logger != nil {
 		b, e := httputil.DumpRequestOut(req, sess.DumpRequest)
-		sess.Logger("APICall", b, e)
-
+		sess.Logger("APICall", string(b), e)
 	}
 
 	if sess.client == nil {
@@ -147,7 +151,7 @@ func (sess Session) APICall(method string, url string, body interface{}, headers
 	}
 }
 
-func DefaultLogger(msg string, data []byte, err error) {
+func DefaultLogger(msg string, data string, err error) {
 	if err != nil {
 		log.Printf("Message (Error) %s\n  Data:  %s\n   Err:  %s\n", msg, data, err.Error())
 	} else {
