@@ -102,24 +102,24 @@ func (sess Session) Call(method string, url string, req interface{}, headers map
 
 	res, err := sess.APICall(method, url, req, headers)
 
-	if err != nil {
-		return emptydata, res, err
-	}
+	//if err != nil {
+	//	return emptydata, res, err
+	//}
 
-	if res == nil {
-		return emptydata, res, fmt.Errorf("%s result was nil and error was nil", url)
-	}
+	//if res == nil {
+	//	return emptydata, res, fmt.Errorf("%s result was nil and error was nil", url)
+	//}
 
 	if sess.Debug && sess.Logger != nil {
 		b, e := httputil.DumpResponse(res, sess.DumpResponse)
 		sess.Logger("Call", string(b), e)
 	}
 
-	if !utils.RequestIsSuccessful(res.StatusCode) {
-		return emptydata, res, fmt.Errorf("%s failed with Status: %s Status Code %d", url, res.Status, res.StatusCode)
-	}
+	//if !utils.RequestIsSuccessful(res.StatusCode) {
+	//	return emptydata, res, fmt.Errorf("%s failed with Status: %s Status Code %d", url, res.Status, res.StatusCode)
+	//}
 
-	if res.Body != http.NoBody {
+	if res != nil && res.Body != http.NoBody {
 		defer res.Body.Close()
 		bytes, err := ioutil.ReadAll(res.Body)
 		return bytes, res, err
