@@ -125,7 +125,7 @@ func (sess Session) Call(method string, url string, req interface{}, headers map
 		return bytes, res, err
 	}
 	// return empty if got no body, response and err
-	return []byte{}, res, err
+	return emptydata, res, err
 }
 
 func (sess Session) APICall(method string, url string, body interface{}, headers map[string]string) (*http.Response, error) {
