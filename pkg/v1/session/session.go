@@ -1,9 +1,10 @@
 package sess
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -22,6 +23,9 @@ type MakeRequest func(sess Session, method string, uri string, ep uris.EndPoint,
 type Session struct {
 	api  cfg.APIServer
 	auth cfg.AuthServer
+
+	Ctx                    context.Context
+	ContextAccessTokenName string
 
 	client       *http.Client
 	Debug        bool
@@ -88,6 +92,11 @@ func DefaultHeaders(sess Session) map[string]string {
 	if len(sess.accesstoken) > 0 {
 		headers["Authorization"] = "Bearer " + sess.accesstoken
 	}
+	if sess.Ctx != nil {
+		if auth, ok := sess.Ctx.Value(sess.ContextAccessTokenName).(string); ok {
+			headers["Authorization"] = "Bearer " + auth
+		}
+	}
 	if sess.Debug && sess.Logger != nil {
 		for k, v := range headers {
 			sess.Logger("DefaultHeaders", fmt.Sprintf("[%s] : %s", k, v), nil)
@@ -102,86 +111,67 @@ func (sess Session) Call(method string, url string, req interface{}, headers map
 
 	res, err := sess.APICall(method, url, req, headers)
 
-	//if err != nil {
-	//	return emptydata, res, err
-	//}
-
-	//if res == nil {
-	//	return emptydata, res, fmt.Errorf("%s result was nil and error was nil", url)
-	//}
-
-	if sess.Debug && sess.Logger != nil {
+	if res != nil && sess.Debug && sess.Logger != nil {
 		b, e := httputil.DumpResponse(res, sess.DumpResponse)
 		sess.Logger("Call", string(b), e)
 	}
 
-	//if !utils.RequestIsSuccessful(res.StatusCode) {
-	//	return emptydata, res, fmt.Errorf("%s failed with Status: %s Status Code %d", url, res.Status, res.StatusCode)
-	//}
-
 	if res != nil && res.Body != http.NoBody {
 		defer res.Body.Close()
-		bytes, err := ioutil.ReadAll(res.Body)
+		bytes, err := io.ReadAll(res.Body)
 		return bytes, res, err
 	}
+
 	// return empty if got no body, response and err
 	return emptydata, res, err
 }
 
 func (sess Session) APICall(method string, url string, body interface{}, headers map[string]string) (*http.Response, error) {
 
-	if body == nil {
-		req, reqerr := http.NewRequest(method, url, nil)
+	req, reqerr := http.NewRequest(method, url, nil)
 
-		if reqerr != nil {
-			return nil, reqerr
-		}
+	if reqerr != nil {
+		return nil, reqerr
+	}
 
-		for k, v := range headers {
-			req.Header.Add(k, v)
-		}
+	if body != nil {
+		ct := headers["Content-Type"]
+		if strings.Contains(ct, "json") {
+			cs, err := json.Marshal(body)
+			if err != nil {
+				return nil, err
+			}
 
-		if sess.Debug && sess.Logger != nil {
-			b, e := httputil.DumpRequestOut(req, sess.DumpRequest)
-			sess.Logger("APICall", string(b), e)
-		}
+			tosent := string(cs)
+			payload := strings.NewReader(tosent)
+			req, reqerr = http.NewRequest(method, url, payload)
 
-		if sess.client == nil {
-			return http.DefaultClient.Do(req)
-		} else {
-			return sess.client.Do(req)
-		}
-
-	} else {
-
-		cs, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-
-		tosent := string(cs)
-		payload := strings.NewReader(tosent)
-		req, reqerr := http.NewRequest(method, url, payload)
-
-		if reqerr != nil {
-			return nil, reqerr
-		}
-
-		for k, v := range headers {
-			req.Header.Add(k, v)
-		}
-
-		if sess.Debug && sess.Logger != nil {
-			b, e := httputil.DumpRequestOut(req, sess.DumpRequest)
-			sess.Logger("APICall", string(b), e)
-		}
-
-		if sess.client == nil {
-			return http.DefaultClient.Do(req)
-		} else {
-			return sess.client.Do(req)
+			if reqerr != nil {
+				return nil, reqerr
+			}
 		}
 	}
+
+	if sess.Ctx != nil {
+		// add context to the request
+		req = req.WithContext(sess.Ctx)
+	}
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	if sess.Debug && sess.Logger != nil {
+		b, e := httputil.DumpRequestOut(req, sess.DumpRequest)
+		sess.Logger("APICall", string(b), e)
+	}
+
+	if sess.client == nil {
+		return http.DefaultClient.Do(req)
+	} else {
+		return sess.client.Do(req)
+	}
+
 }
 
 func DefaultLogger(msg string, data string, err error) {

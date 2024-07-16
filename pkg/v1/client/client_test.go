@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestClient(t *testing.T) {
 	newclient.Session.Debug = true
 	newclient.Session.DumpResponse = true
 	newclient.Session.DumpRequest = true
-
+	newclient.Session.Ctx = context.Background()
 	bytes, resp, err := newclient.Session.Get("/1")
 	if err != nil {
 		t.Fatalf("%v", err.Error())
