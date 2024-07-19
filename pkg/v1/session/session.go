@@ -76,6 +76,14 @@ func (sess Session) PutBody(uri string, req interface{}) ([]byte, *http.Response
 	return sess.MakeRequest(sess, http.MethodPut, uri, sess.api.EndPoint, req)
 }
 
+func (sess Session) Delete(uri string) ([]byte, *http.Response, error) {
+	return sess.MakeRequest(sess, http.MethodDelete, uri, sess.api.EndPoint, nil)
+}
+
+func (sess Session) DeleteBody(uri string, req interface{}) ([]byte, *http.Response, error) {
+	return sess.MakeRequest(sess, http.MethodDelete, uri, sess.api.EndPoint, req)
+}
+
 func DoRequest(sess Session, method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error) {
 	url, err := ep.GetURL(uri)
 	emptydata := []byte{}
