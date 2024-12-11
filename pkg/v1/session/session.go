@@ -17,7 +17,7 @@ import (
 )
 
 type SessionLog func(msg string, data string, err error)
-type GetHeaders func(sess Session) map[string]string
+type GetHeaders func(sess Session, authtoken string) map[string]string
 type MakeRequest func(sess Session, method string, uri string, ep uris.EndPoint, req interface{}) ([]byte, *http.Response, error)
 
 type Session struct {
@@ -90,15 +90,15 @@ func DoRequest(sess Session, method string, uri string, ep uris.EndPoint, req in
 	if err != nil {
 		return emptydata, nil, err
 	}
-	return sess.Call(method, url, req, sess.GetHeaders(sess))
+	return sess.Call(method, url, req, sess.GetHeaders(sess,sess.accesstoken))
 }
 
-func DefaultHeaders(sess Session) map[string]string {
+func DefaultHeaders(sess Session, authtoken string) map[string]string {
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
 	headers["Accept"] = "application/json"
-	if len(sess.accesstoken) > 0 {
-		headers["Authorization"] = "Bearer " + sess.accesstoken
+	if len(authtoken) > 0 {
+		headers["Authorization"] = "Bearer " + authtoken
 	}
 	if sess.Ctx != nil {
 		if auth, ok := sess.Ctx.Value(sess.ContextAccessTokenName).(string); ok {
